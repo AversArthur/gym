@@ -113,7 +113,7 @@ bodyweight_log
 | ropepush | Triceps Pushdown (Cable - Rope) |
 | calf | Standing Calf Raise |
 
-`weight_mode`: squat → `plates_only` (у Смита неизвестный вес грифа), гантели → `per_dumbbell`, блоки и тренажёры → `stack`, штанга → `total` (с грифом 20 кг), pullup → `assisted`, планка и подъём ног → `bodyweight`.
+`weight_mode`: squat, жим ногами, хаммер → `plates_only` (вес самого снаряда неизвестен, вводим сумму блинов), гантели → `per_dumbbell`, блоки и тренажёры → `stack`, штанга → `total` (с грифом 20 кг), pullup → `assisted`, планка и подъём ног → `bodyweight`.
 
 ## Экраны
 

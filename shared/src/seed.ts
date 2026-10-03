@@ -201,7 +201,7 @@ export const SEED_EXERCISES: SeedExercise[] = [
     nameEn: 'Leg Press',
     equipment: 'machine',
     muscle: 'Квадрицепсы, ягодицы',
-    weightMode: 'stack',
+    weightMode: 'plates_only',
     cues: [
       'Поясница прижата к спинке всё время',
       'Колени не заваливаются внутрь',
@@ -227,7 +227,7 @@ export const SEED_EXERCISES: SeedExercise[] = [
     nameEn: 'Iso-Lateral Chest Press (Machine)',
     equipment: 'machine',
     muscle: 'Грудь',
-    weightMode: 'stack',
+    weightMode: 'plates_only',
     cues: [
       'Лопатки сведены, спина на спинке',
       'Рукоятки на уровне середины груди',
@@ -289,9 +289,10 @@ export const SEED_EXERCISES: SeedExercise[] = [
   },
 ];
 
-// Шаг веса: +2,5 кг верх тела, +5 кг ноги (правило из прототипа), гантели — 2 кг (шаг гантельного ряда в зале).
-const UP = 2.5;
-const LEGS = 5;
+// Шаг веса. Минимальный блин в зале 2,5 кг, вешается на обе стороны → штанга и тренажёры
+// с блинами прибавляют минимум 5 кг. Гантели идут через 2 кг. Блоки/стеки — 2,5 кг.
+const STACK = 2.5;
+const PLATES = 5;
 const DB = 2;
 
 // Отдых из прототипа: «2–3 мин» → 150 с, «60–90 с» → 75 с, «90 с после пары» → 90 с на втором упражнении пары.
@@ -310,7 +311,7 @@ export const SEED_PROGRAM: { name: string; days: SeedDay[] } = {
           repMax: 10,
           unit: 'reps',
           restSec: 150,
-          weightStep: LEGS,
+          weightStep: PLATES,
         },
         {
           exerciseId: 'bench',
@@ -319,7 +320,7 @@ export const SEED_PROGRAM: { name: string; days: SeedDay[] } = {
           repMax: 10,
           unit: 'reps',
           restSec: 0,
-          weightStep: UP,
+          weightStep: PLATES,
           supersetGroup: 1,
         },
         {
@@ -329,7 +330,7 @@ export const SEED_PROGRAM: { name: string; days: SeedDay[] } = {
           repMax: 12,
           unit: 'reps',
           restSec: 90,
-          weightStep: UP,
+          weightStep: STACK,
           supersetGroup: 1,
         },
         {
@@ -348,7 +349,7 @@ export const SEED_PROGRAM: { name: string; days: SeedDay[] } = {
           repMax: 12,
           unit: 'reps',
           restSec: 0,
-          weightStep: UP,
+          weightStep: PLATES,
           supersetGroup: 2,
         },
         {
@@ -358,7 +359,7 @@ export const SEED_PROGRAM: { name: string; days: SeedDay[] } = {
           repMax: 12,
           unit: 'reps',
           restSec: 75,
-          weightStep: UP,
+          weightStep: STACK,
           supersetGroup: 2,
         },
         {
@@ -368,7 +369,7 @@ export const SEED_PROGRAM: { name: string; days: SeedDay[] } = {
           repMax: 45,
           unit: 'sec',
           restSec: 60,
-          weightStep: UP,
+          weightStep: STACK,
         },
       ],
     },
@@ -384,7 +385,7 @@ export const SEED_PROGRAM: { name: string; days: SeedDay[] } = {
           repMax: 10,
           unit: 'reps',
           restSec: 150,
-          weightStep: LEGS,
+          weightStep: PLATES,
         },
         {
           exerciseId: 'incline',
@@ -403,7 +404,7 @@ export const SEED_PROGRAM: { name: string; days: SeedDay[] } = {
           repMax: 10,
           unit: 'reps',
           restSec: 90,
-          weightStep: UP,
+          weightStep: PLATES,
           supersetGroup: 1,
         },
         {
@@ -413,7 +414,7 @@ export const SEED_PROGRAM: { name: string; days: SeedDay[] } = {
           repMax: 12,
           unit: 'reps',
           restSec: 75,
-          weightStep: LEGS,
+          weightStep: PLATES,
         },
         {
           exerciseId: 'lateral',
@@ -431,7 +432,7 @@ export const SEED_PROGRAM: { name: string; days: SeedDay[] } = {
           repMax: 15,
           unit: 'reps',
           restSec: 60,
-          weightStep: UP,
+          weightStep: STACK,
         },
       ],
     },
@@ -447,7 +448,7 @@ export const SEED_PROGRAM: { name: string; days: SeedDay[] } = {
           repMax: 12,
           unit: 'reps',
           restSec: 150,
-          weightStep: LEGS,
+          weightStep: PLATES,
         },
         {
           exerciseId: 'pullup',
@@ -456,7 +457,7 @@ export const SEED_PROGRAM: { name: string; days: SeedDay[] } = {
           repMax: null,
           unit: 'reps',
           restSec: 120,
-          weightStep: UP,
+          weightStep: STACK,
         },
         {
           exerciseId: 'chestpress',
@@ -465,7 +466,7 @@ export const SEED_PROGRAM: { name: string; days: SeedDay[] } = {
           repMax: 12,
           unit: 'reps',
           restSec: 0,
-          weightStep: UP,
+          weightStep: PLATES,
           supersetGroup: 1,
         },
         {
@@ -475,7 +476,7 @@ export const SEED_PROGRAM: { name: string; days: SeedDay[] } = {
           repMax: 12,
           unit: 'reps',
           restSec: 90,
-          weightStep: UP,
+          weightStep: STACK,
           supersetGroup: 1,
         },
         {
@@ -485,7 +486,7 @@ export const SEED_PROGRAM: { name: string; days: SeedDay[] } = {
           repMax: 15,
           unit: 'reps',
           restSec: 60,
-          weightStep: UP,
+          weightStep: STACK,
         },
         {
           exerciseId: 'hammer',
@@ -504,7 +505,7 @@ export const SEED_PROGRAM: { name: string; days: SeedDay[] } = {
           repMax: 12,
           unit: 'reps',
           restSec: 75,
-          weightStep: UP,
+          weightStep: STACK,
           supersetGroup: 2,
         },
         {
