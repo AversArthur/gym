@@ -1,0 +1,12 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    ports:
+      # Только localhost: снаружи доступ через nginx на VPS
+      - '127.0.0.1:${APP_PORT:-3100}:3000'
+    volumes:
+      - ./data:/app/data
