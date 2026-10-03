@@ -289,9 +289,10 @@ export const SEED_EXERCISES: SeedExercise[] = [
   },
 ];
 
-// Шаг веса: +2,5 кг верх тела, +5 кг ноги (правило из прототипа).
+// Шаг веса: +2,5 кг верх тела, +5 кг ноги (правило из прототипа), гантели — 2 кг (шаг гантельного ряда в зале).
 const UP = 2.5;
 const LEGS = 5;
+const DB = 2;
 
 // Отдых из прототипа: «2–3 мин» → 150 с, «60–90 с» → 75 с, «90 с после пары» → 90 с на втором упражнении пары.
 export const SEED_PROGRAM: { name: string; days: SeedDay[] } = {
@@ -338,7 +339,7 @@ export const SEED_PROGRAM: { name: string; days: SeedDay[] } = {
           repMax: 10,
           unit: 'reps',
           restSec: 90,
-          weightStep: UP,
+          weightStep: DB,
         },
         {
           exerciseId: 'curl',
@@ -392,7 +393,7 @@ export const SEED_PROGRAM: { name: string; days: SeedDay[] } = {
           repMax: 10,
           unit: 'reps',
           restSec: 0,
-          weightStep: UP,
+          weightStep: DB,
           supersetGroup: 1,
         },
         {
@@ -421,7 +422,7 @@ export const SEED_PROGRAM: { name: string; days: SeedDay[] } = {
           repMax: 15,
           unit: 'reps',
           restSec: 60,
-          weightStep: UP,
+          weightStep: DB,
         },
         {
           exerciseId: 'legraise',
@@ -493,7 +494,7 @@ export const SEED_PROGRAM: { name: string; days: SeedDay[] } = {
           repMax: 12,
           unit: 'reps',
           restSec: 0,
-          weightStep: UP,
+          weightStep: DB,
           supersetGroup: 2,
         },
         {
@@ -513,7 +514,7 @@ export const SEED_PROGRAM: { name: string; days: SeedDay[] } = {
           repMax: 15,
           unit: 'reps',
           restSec: 60,
-          weightStep: LEGS,
+          weightStep: DB,
         },
       ],
     },
