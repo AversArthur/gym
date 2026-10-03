@@ -6,15 +6,22 @@
   "scripts": {
     "dev": "tsx watch --conditions=source src/index.ts",
     "build": "tsc -b",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "db:generate": "drizzle-kit generate",
+    "db:check": "tsx --conditions=source src/db/check.ts",
+    "test": "vitest run"
   },
   "dependencies": {
     "@fastify/static": "^10.1.5",
     "@gym/shared": "*",
+    "better-sqlite3": "^13.0.3",
+    "drizzle-orm": "^0.45.3",
     "fastify": "^5.12.5"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^26.6.4",
+    "drizzle-kit": "^0.31.11",
     "tsx": "^4.23.15"
   }
 }

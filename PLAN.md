@@ -62,13 +62,15 @@ program_days
 
 program_items
   id, day_id, exercise_id, position,
-  sets int, rep_min int, rep_max int (null для «макс»), duration_sec int (для планки),
+  sets int, rep_min int, rep_max int (оба null = «макс»),
+  unit text                  -- 'reps' | 'sec' (планка: rep_min/rep_max в секундах)
   superset_group int null,   -- одинаковое число = суперсет
-  rest_sec int,
+  rest_sec int,              -- отдых ПОСЛЕ этого упражнения; у первого в суперсете 0
   weight_step real           -- 2.5 для верха, 5 для ног
 
 workouts
-  id, user_id, program_day_id, started_at, finished_at, notes, bodyweight_kg real null
+  id, user_id, program_day_id (set null при удалении дня), day_code ('A'|'B'|'C' на момент тренировки),
+  client_id UNIQUE (офлайн-создание), started_at, finished_at, notes, bodyweight_kg real null
 
 workout_sets
   id, workout_id, exercise_id, set_index,
@@ -111,7 +113,7 @@ bodyweight_log
 | ropepush | Triceps Pushdown (Cable - Rope) |
 | calf | Standing Calf Raise |
 
-`weight_mode`: squat → `plates_only` (у Смита неизвестный вес грифа), гантели → `per_dumbbell`, блоки и тренажёры → `stack`, штанга → `total` (с грифом 20 кг), pullup → `assisted` или bodyweight.
+`weight_mode`: squat → `plates_only` (у Смита неизвестный вес грифа), гантели → `per_dumbbell`, блоки и тренажёры → `stack`, штанга → `total` (с грифом 20 кг), pullup → `assisted`, планка и подъём ног → `bodyweight`.
 
 ## Экраны
 

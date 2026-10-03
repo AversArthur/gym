@@ -26,3 +26,13 @@ open http://localhost:3100
 ```
 
 Порт задаётся `APP_PORT` в `.env` (см. `.env.example`). Контейнер слушает только `127.0.0.1`; на VPS снаружи его открывает nginx.
+
+## База данных
+
+SQLite в `data/gym.db` (путь меняется через `DATABASE_PATH`). Миграции применяются и сид заливается автоматически при старте сервера.
+
+```sh
+npm run db:generate -w server -- --name <имя>   # после изменения server/src/db/schema.ts
+npm run db:check -w server                       # распечатать программу из БД
+npm test                                         # тесты (vitest)
+```
