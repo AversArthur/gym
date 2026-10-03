@@ -4,6 +4,7 @@ import { WorkoutPage } from './pages/Workout';
 import { WorkoutSummaryPage } from './pages/WorkoutSummary';
 import { RestTimerBar } from './components/RestTimerBar';
 import { HistoryPage } from './pages/History';
+import { HistoryDetailPage } from './pages/HistoryDetail';
 import { ProgressPage } from './pages/Progress';
 import { ProgramPage } from './pages/Program';
 import { ExportPage } from './pages/Export';
@@ -26,6 +27,7 @@ export function App() {
           <Route path="/" component={TodayPage} />
           <Route path="/workout/:id/summary" component={WorkoutSummaryPage} />
           <Route path="/workout/:id" component={WorkoutPage} />
+          <Route path="/history/:id" component={HistoryDetailPage} />
           <Route path="/history" component={HistoryPage} />
           <Route path="/progress" component={ProgressPage} />
           <Route path="/program" component={ProgramPage} />
