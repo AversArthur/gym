@@ -13,6 +13,7 @@
     "@gym/shared": "*",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
+    "uplot": "^1.6.32",
     "wouter": "^3.13.0"
   },
   "devDependencies": {

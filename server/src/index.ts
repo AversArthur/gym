@@ -1,9 +1,8 @@
 import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import Fastify from 'fastify';
 import fastifyStatic from '@fastify/static';
-import type { HealthResponse } from '@gym/shared';
+import { buildApp } from './app.js';
 import { openDb } from './db/client.js';
 import { seedIfEmpty } from './db/seed.js';
 
@@ -11,12 +10,9 @@ const PORT = Number(process.env.PORT ?? 3000);
 const HOST = process.env.HOST ?? '127.0.0.1';
 const WEB_DIST = resolve(dirname(fileURLToPath(import.meta.url)), '../../web/dist');
 
-const app = Fastify({ logger: { level: process.env.LOG_LEVEL ?? 'info' } });
-
 const db = openDb();
+const app = buildApp({ db, logger: { level: process.env.LOG_LEVEL ?? 'info' } });
 if (seedIfEmpty(db)) app.log.info('БД пустая: залит сид (упражнения, программа A·B·C)');
-
-app.get('/api/health', async (): Promise<HealthResponse> => ({ ok: true, version: '0.1.0' }));
 
 // В проде сервер сам отдаёт собранный фронт; в dev фронт отдаёт Vite и проксирует /api сюда.
 if (existsSync(WEB_DIST)) {
