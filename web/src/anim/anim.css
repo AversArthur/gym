@@ -1,0 +1,86 @@
+/* Стили фигуры из прототипа (.fig и блок figure) */
+.anim {
+  background: var(--figbg);
+  border-radius: 10px;
+  align-self: start;
+}
+.anim svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.anim .limb {
+  fill: none;
+  stroke: var(--fg);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.anim .torso {
+  stroke-width: 8;
+}
+.anim .neck {
+  stroke-width: 4;
+}
+.anim .head {
+  fill: var(--surface);
+  stroke: var(--fg);
+  stroke-width: 3.5;
+}
+.anim .trunk {
+  fill: var(--fg);
+  stroke: var(--fg);
+  stroke-width: 4;
+  stroke-linejoin: round;
+}
+.anim .floor {
+  stroke: var(--line);
+  stroke-width: 2;
+}
+.anim .pad {
+  fill: var(--pad);
+}
+.anim .padline {
+  fill: none;
+  stroke: var(--pad);
+  stroke-width: 7;
+  stroke-linecap: round;
+}
+.anim .eq {
+  fill: none;
+  stroke: var(--eq);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.anim .cable {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 3;
+}
+.anim .pulley {
+  fill: var(--surface);
+  stroke: var(--eq);
+  stroke-width: 2;
+}
+.anim .load {
+  fill: var(--day);
+}
+.anim .hub {
+  fill: var(--figbg);
+}
+.anim .grip {
+  fill: var(--eq);
+}
+.anim .rope {
+  fill: none;
+  stroke: var(--day);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.anim .ghost {
+  opacity: 0.28;
+}
+.anim .anim-none {
+  opacity: 0.5;
+}

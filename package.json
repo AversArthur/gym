@@ -17,7 +17,7 @@
     "typecheck": "tsc -b",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "test": "npm run test -w server"
+    "test": "npm run test -w server && npm run test -w web"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
