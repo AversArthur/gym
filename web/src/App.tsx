@@ -1,6 +1,8 @@
 import { Link, Route, Switch, useLocation } from 'wouter';
 import { TodayPage } from './pages/Today';
 import { WorkoutPage } from './pages/Workout';
+import { WorkoutSummaryPage } from './pages/WorkoutSummary';
+import { RestTimerBar } from './components/RestTimerBar';
 import { HistoryPage } from './pages/History';
 import { ProgressPage } from './pages/Progress';
 import { ProgramPage } from './pages/Program';
@@ -22,7 +24,8 @@ export function App() {
       <main className="wrap">
         <Switch>
           <Route path="/" component={TodayPage} />
-          <Route path="/workout" component={WorkoutPage} />
+          <Route path="/workout/:id/summary" component={WorkoutSummaryPage} />
+          <Route path="/workout/:id" component={WorkoutPage} />
           <Route path="/history" component={HistoryPage} />
           <Route path="/progress" component={ProgressPage} />
           <Route path="/program" component={ProgramPage} />
@@ -33,9 +36,22 @@ export function App() {
           </Route>
         </Switch>
       </main>
+      <RestTimerBar />
       <nav className="bottom-nav" aria-label="Разделы">
         {NAV.map((n) => (
-          <Link key={n.href} href={n.href} aria-current={location === n.href ? 'page' : undefined}>
+          <Link
+            key={n.href}
+            href={n.href}
+            aria-current={
+              (
+                n.href === '/'
+                  ? location === '/' || location.startsWith('/workout')
+                  : location.startsWith(n.href)
+              )
+                ? 'page'
+                : undefined
+            }
+          >
             {n.label}
           </Link>
         ))}

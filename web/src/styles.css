@@ -211,3 +211,578 @@ input:focus-visible {
 .dev-cell figcaption .mono {
   font-size: 11.5px;
 }
+
+/* ---------- общие элементы ---------- */
+.small {
+  font-size: 13px;
+}
+.btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--fg);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+.btn.primary {
+  background: var(--day);
+  border-color: var(--day);
+  color: var(--on-day);
+}
+.btn.wide {
+  width: 100%;
+}
+.btn.big {
+  min-height: 56px;
+  font-size: 17px;
+  margin: 16px 0;
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.link {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--day);
+  cursor: pointer;
+  text-decoration: none;
+}
+.link.danger {
+  color: var(--muted);
+}
+.chip {
+  appearance: none;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+.chip.ghost {
+  color: var(--muted);
+}
+.spacer {
+  flex: 1;
+}
+.card-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+.card + .card,
+.card + .btn,
+.stats + .card {
+  margin-top: 12px;
+}
+
+/* ---------- вкладки дней (из прототипа) ---------- */
+nav.tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding-block: 12px;
+}
+.tab {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--fg);
+  border-radius: 12px;
+  padding: 10px 10px 9px;
+  text-align: left;
+  cursor: pointer;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  font: inherit;
+}
+.tab .l {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-d);
+  font-weight: 700;
+  font-size: 18px;
+}
+.tab .dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--tc);
+}
+.tab .next {
+  margin-left: auto;
+  white-space: nowrap;
+  font-family: var(--font-b);
+  font-weight: 600;
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tc);
+}
+.tab .s {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tab[aria-selected='true'] {
+  border-color: var(--tc);
+  box-shadow: inset 0 -3px 0 var(--tc);
+}
+
+.resume {
+  display: grid;
+  gap: 2px;
+  text-decoration: none;
+  color: var(--fg);
+  border-color: var(--day);
+  margin-bottom: 4px;
+}
+.day-preview p {
+  margin: 0 0 8px;
+  font-size: 13.5px;
+}
+.day-preview ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+.day-preview li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14.5px;
+}
+.day-preview li.ss {
+  border-left: 3px solid var(--day);
+  padding-left: 8px;
+}
+.day-preview .small {
+  margin: 10px 0 0;
+}
+.bw label {
+  font-weight: 600;
+}
+.bw-row {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0 4px;
+}
+.bw p {
+  margin: 0;
+}
+input[type='text'],
+textarea {
+  font: inherit;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.bw input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 12px;
+  font-family: var(--font-m);
+  font-size: 17px;
+}
+
+/* ---------- тренировка ---------- */
+.workout-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.workout-head .page-title {
+  margin: 0;
+  display: grid;
+}
+.workout-head .sub {
+  font-family: var(--font-b);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--muted);
+  letter-spacing: 0;
+}
+.workout-head p {
+  margin: 4px 0 0;
+  font-size: 13px;
+}
+.blocks {
+  display: grid;
+  gap: 18px;
+}
+.block {
+  display: grid;
+  gap: 10px;
+}
+.super {
+  border-left: 3px solid var(--day);
+  padding-left: 10px;
+}
+.tag {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--day);
+  font-weight: 600;
+}
+.rest {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin: 0;
+  font-family: var(--font-m);
+}
+
+.ex {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  min-width: 0;
+}
+.ex-head {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr);
+  gap: 12px;
+}
+.ex h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+.ex .dose {
+  font-family: var(--font-m);
+  font-weight: 600;
+  font-size: 14px;
+  margin: 4px 0 4px;
+  color: var(--day);
+  font-variant-numeric: tabular-nums;
+}
+.done-count {
+  color: var(--muted);
+}
+.ex .last {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.35;
+}
+.progress-hint {
+  margin: 6px 0 0;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 13px;
+  background: color-mix(in srgb, var(--day) 14%, transparent);
+}
+.progress-hint b {
+  color: var(--day);
+}
+.cues-toggle {
+  margin-top: 6px;
+  font-size: 13px;
+  min-height: 28px;
+}
+.ex .cues {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13.5px;
+  color: var(--muted);
+  display: grid;
+  gap: 2px;
+}
+.ex.skipped {
+  opacity: 0.6;
+}
+.ex-skipped-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.setrows {
+  display: grid;
+  gap: 6px;
+}
+.setrows-head,
+.setrow {
+  display: grid;
+  grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr) 44px;
+  gap: 8px;
+  align-items: center;
+}
+.setrows.no-weight .setrows-head,
+.setrow.no-weight {
+  grid-template-columns: minmax(0, 1fr) 44px;
+}
+.setrows-head span {
+  font-size: 11.5px;
+  color: var(--muted);
+  text-align: center;
+}
+.stepper {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) 38px;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  overflow: hidden;
+}
+.stepper.invalid {
+  border-color: var(--a);
+  box-shadow: 0 0 0 1px var(--a);
+}
+.stepper .step {
+  appearance: none;
+  border: 0;
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.stepper .step:active {
+  background: var(--line);
+}
+.stepper .step:disabled {
+  color: var(--line);
+}
+.stepper input {
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  text-align: center;
+  font-family: var(--font-m);
+  font-weight: 600;
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+  padding: 0;
+}
+.setbtn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font-m);
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  padding: 0;
+  touch-action: manipulation;
+}
+.setrow[data-status='saved'] .setbtn {
+  background: var(--day);
+  border-color: var(--day);
+  color: var(--on-day);
+  font-size: 18px;
+}
+.setrow[data-status='dirty'] .setbtn {
+  border-color: var(--day);
+  color: var(--day);
+  border-style: dashed;
+}
+.setrow[data-status='saving'] .setbtn {
+  border-color: var(--day);
+  animation: pulse 0.9s ease-in-out infinite;
+}
+.setrow[data-status='error'] .setbtn {
+  border-color: var(--a);
+  color: var(--a);
+}
+.setrow[data-status='saved'] .stepper input {
+  color: var(--fg);
+}
+.setrow[data-status='empty'] .stepper input {
+  color: var(--muted);
+}
+@keyframes pulse {
+  50% {
+    opacity: 0.4;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .setrow[data-status='saving'] .setbtn {
+    animation: none;
+  }
+}
+
+.ex-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.notes {
+  margin-top: 18px;
+  display: grid;
+  gap: 6px;
+}
+.notes label {
+  font-weight: 600;
+}
+.notes textarea {
+  padding: 8px 10px;
+  resize: vertical;
+}
+.workout-foot {
+  display: grid;
+  gap: 14px;
+  justify-items: center;
+  margin-top: 18px;
+}
+
+/* ---------- таймер отдыха ---------- */
+.restbar {
+  position: fixed;
+  left: 8px;
+  right: 8px;
+  bottom: calc(var(--nav-h) + 8px + env(safe-area-inset-bottom, 0px));
+  z-index: 20;
+  max-width: 704px;
+  margin: 0 auto;
+  border-radius: 16px;
+  background: var(--fg);
+  color: var(--bg);
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
+}
+.restbar-fill {
+  position: absolute;
+  inset: 0;
+  background: var(--day);
+  opacity: 0.35;
+  transform-origin: left;
+  transition: transform 0.25s linear;
+}
+.restbar.done .restbar-fill {
+  opacity: 1;
+}
+.restbar.done {
+  color: var(--on-day);
+}
+.restbar-body {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 8px 8px 16px;
+}
+.restbar-text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+}
+.restbar-label {
+  font-size: 12.5px;
+  opacity: 0.8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.restbar-time {
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+.restbar button {
+  appearance: none;
+  min-width: 48px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: rgb(127 127 127 / 0.22);
+  color: inherit;
+  font: inherit;
+  font-family: var(--font-m);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ---------- итог ---------- */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 14px 0;
+}
+.stats div {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 8px;
+  text-align: center;
+  min-width: 0;
+}
+.stats b {
+  display: block;
+  font-size: 16px;
+}
+.stats span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.records {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+.records li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 14px;
+}
+
+@media (max-width: 380px) {
+  .ex-head {
+    grid-template-columns: 84px minmax(0, 1fr);
+  }
+  .stepper {
+    grid-template-columns: 32px minmax(0, 1fr) 32px;
+  }
+  .tab .s {
+    font-size: 11px;
+  }
+}
+/* место под плашку таймера, чтобы она не закрывала последние подходы */
+.workout {
+  padding-bottom: 84px;
+}
