@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { get } from '../lib/api';
+import { api, get } from '../lib/api';
+import { idb } from '../lib/offline/idb';
+import { useSyncStatus } from '../lib/offline/outbox';
 
 const PERIODS: [number, string][] = [
   [7, '7 дней'],
@@ -23,6 +25,29 @@ async function copyText(text: string): Promise<boolean> {
     ta.remove();
     return ok;
   }
+}
+
+function Logout() {
+  const { pending } = useSyncStatus();
+  async function logout() {
+    if (
+      pending > 0 &&
+      !confirm(
+        `Есть неотправленные подходы (${pending}). Они отправятся после следующего входа. Выйти?`,
+      )
+    )
+      return;
+    await api('POST', '/api/logout').catch(() => {});
+    await (await idb()).delete('cache', 'me');
+    location.href = '/';
+  }
+  return (
+    <div className="workout-foot">
+      <button type="button" className="link danger" onClick={logout}>
+        Выйти из аккаунта
+      </button>
+    </div>
+  );
 }
 
 export function ExportPage() {
@@ -94,6 +119,7 @@ export function ExportPage() {
           </a>
         </div>
       </div>
+      <Logout />
     </section>
   );
 }

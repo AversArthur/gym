@@ -24,8 +24,14 @@ export async function api<T>(method: string, url: string, body?: unknown): Promi
   }
   if (res.status === 204) return undefined as T;
   const data = await res.json().catch(() => null);
+  if (res.status === 401 && !url.startsWith('/api/login')) authRequired();
   if (!res.ok) throw new ApiError(res.status, data?.error ?? 'error', data?.message);
   return data as T;
 }
 
 export const get = <T>(url: string) => api<T>('GET', url);
+
+/** Сессия кончилась — приложение показывает экран входа. */
+export function authRequired() {
+  window.dispatchEvent(new Event('auth-required'));
+}

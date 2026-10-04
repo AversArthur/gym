@@ -5,8 +5,14 @@ services:
     env_file:
       - path: .env
         required: false
+    environment:
+      NODE_ENV: production
+      # Порт открыт только на 127.0.0.1, снаружи ходит nginx — доверяем его X-Forwarded-For
+      TRUST_PROXY: 'true'
+      # Cookie только по https. Для локальной проверки в Safari по http://localhost поставь false в .env
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
     ports:
-      # Только localhost: снаружи доступ через nginx на VPS
       - '127.0.0.1:${APP_PORT:-3100}:3000'
     volumes:
       - ./data:/app/data
+      - ./backups:/app/backups

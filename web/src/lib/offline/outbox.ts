@@ -2,6 +2,7 @@
 // Сервер делает upsert по client_id, поэтому повторная отправка безопасна.
 import { useSyncExternalStore } from 'react';
 import type { SyncOp, SyncResult } from '@gym/shared';
+import { authRequired } from '../api';
 import { idb, localWorkouts } from './idb';
 
 export type SyncState = 'idle' | 'syncing' | 'offline' | 'auth' | 'error';
@@ -68,7 +69,10 @@ async function doFlush() {
     } catch {
       return set({ state: 'offline' });
     }
-    if (res.status === 401) return set({ state: 'auth' });
+    if (res.status === 401) {
+      authRequired();
+      return set({ state: 'auth' });
+    }
     if (!res.ok) return set({ state: 'error' });
     const { results } = (await res.json()) as { results: SyncResult[] };
     const tx = db.transaction('outbox', 'readwrite');

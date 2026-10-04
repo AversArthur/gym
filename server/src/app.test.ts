@@ -64,7 +64,7 @@ async function addSets(
 beforeEach(async () => {
   db = openDb(':memory:');
   seedIfEmpty(db);
-  app = buildApp({
+  app = await buildApp({
     db,
     resolveUser: (req) => Number(req.headers['x-test-user'] ?? 1),
   });

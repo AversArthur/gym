@@ -3,6 +3,7 @@ import { TodayPage } from './pages/Today';
 import { WorkoutPage } from './pages/Workout';
 import { WorkoutSummaryPage } from './pages/WorkoutSummary';
 import { RestTimerBar } from './components/RestTimerBar';
+import { AuthGate } from './components/AuthGate';
 import { HistoryPage } from './pages/History';
 import { HistoryDetailPage } from './pages/HistoryDetail';
 import { ProgressPage } from './pages/Progress';
@@ -21,7 +22,7 @@ const NAV = [
 export function App() {
   const [location] = useLocation();
   return (
-    <>
+    <AuthGate>
       <main className="wrap">
         <Switch>
           <Route path="/" component={TodayPage} />
@@ -58,6 +59,6 @@ export function App() {
           </Link>
         ))}
       </nav>
-    </>
+    </AuthGate>
   );
 }

@@ -144,3 +144,8 @@ export const WeekReportQuery = z.object({
   /** смещение часового пояса клиента в минутах (Date.getTimezoneOffset) */
   tz: z.coerce.number().int().min(-840).max(840).default(0),
 });
+
+export const Login = z.object({
+  username: z.string().trim().min(1).max(64),
+  password: z.string().min(1).max(200),
+});

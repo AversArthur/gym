@@ -1,0 +1,2 @@
+# /etc/cron.d/gym-backup — ежедневный бэкап в 04:15, лог в /var/log/gym-backup.log
+15 4 * * * root cd /opt/gym && docker compose exec -T app node server/dist/cli/backup.js >> /var/log/gym-backup.log 2>&1

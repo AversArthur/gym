@@ -1,4 +1,6 @@
-import Fastify, { type FastifyInstance } from 'fastify';
+import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify';
+import fastifyCookie from '@fastify/cookie';
+import fastifyRateLimit from '@fastify/rate-limit';
 import { eq } from 'drizzle-orm';
 import { ZodError, type z } from 'zod';
 import {
@@ -7,6 +9,7 @@ import {
   HistoryQuery,
   IdParam,
   LastQuery,
+  Login,
   ProgramDayOrder,
   ProgramDayPatch,
   ProgramItemCreate,
@@ -25,6 +28,7 @@ import {
 import type { DB } from './db/client.js';
 import { users } from './db/schema.js';
 import { createRepo, HttpError } from './repo.js';
+import { createAuth, SESSION_COOKIE, SESSION_TTL_MS } from './auth.js';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -35,29 +39,122 @@ declare module 'fastify' {
 export interface AppOptions {
   db: DB;
   logger?: boolean | object;
-  /**
-   * Как определить пользователя запроса. До фазы 9 (вход по паролю) — всегда админ.
-   * В тестах подменяется, чтобы проверять изоляцию данных.
-   */
+  /** В тестах подменяет определение пользователя (вместо cookie-сессии), чтобы проверять изоляцию. */
   resolveUser?: (req: { headers: Record<string, unknown> }) => number | null;
+  /** Secure-флаг cookie. В проде (https) — true. */
+  cookieSecure?: boolean;
+  /** Только для локальной разработки: без входа, как админ. В проде игнорируется. */
+  devAutoLogin?: boolean;
+  /** За nginx: брать IP клиента из X-Forwarded-For (для лимита попыток входа). */
+  trustProxy?: boolean | string;
+  loginLimit?: { max: number; timeWindow: string };
 }
 
 const parse = <S extends z.ZodType>(schema: S, data: unknown): z.output<S> => schema.parse(data);
 
-export function buildApp({ db, logger = false, resolveUser }: AppOptions): FastifyInstance {
-  const app = Fastify({ logger });
+/** Пути API, доступные без входа */
+const PUBLIC = new Set(['/api/health', '/api/login', '/api/logout']);
+
+export async function buildApp({
+  db,
+  logger = false,
+  resolveUser,
+  cookieSecure = false,
+  devAutoLogin = false,
+  trustProxy = false,
+  loginLimit = { max: 5, timeWindow: '1 minute' },
+}: AppOptions): Promise<FastifyInstance> {
+  const app = Fastify({ logger, trustProxy });
   const repo = createRepo(db);
+  const auth = createAuth(db);
+
+  // Плагины ждём до объявления маршрутов: rate-limit навешивается на маршруты при их создании
+  await app.register(fastifyCookie);
+  await app.register(fastifyRateLimit, { global: false });
+
+  const setSessionCookie = (reply: FastifyReply, token: string) =>
+    reply.setCookie(SESSION_COOKIE, token, {
+      path: '/',
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: cookieSecure,
+      maxAge: SESSION_TTL_MS / 1000,
+    });
 
   const adminId = () =>
     db.select({ id: users.id }).from(users).where(eq(users.role, 'admin')).get()?.id ?? null;
-  const userOf = resolveUser ?? (() => adminId());
+  const autoLogin = devAutoLogin && process.env.NODE_ENV !== 'production';
 
   app.decorateRequest('userId', 0);
   app.addHook('onRequest', async (req, reply) => {
-    if (!req.url.startsWith('/api/') || req.url === '/api/health') return;
-    const uid = userOf(req);
-    if (uid == null) return reply.code(401).send({ error: 'unauthorized' });
-    req.userId = uid;
+    if (!req.url.startsWith('/api/')) return;
+    const path = req.url.split('?')[0]!;
+    // CSRF: изменяющий запрос с чужого сайта не пропускаем (вдобавок к SameSite=Lax)
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      const origin = req.headers.origin;
+      if (origin) {
+        let host: string | null = null;
+        try {
+          host = new URL(origin).host;
+        } catch {
+          /* «null» и мусор — чужой источник */
+        }
+        if (host !== req.headers.host) return reply.code(403).send({ error: 'bad_origin' });
+      }
+    }
+    if (PUBLIC.has(path)) return;
+    if (resolveUser) {
+      const uid = resolveUser(req);
+      if (uid == null) return reply.code(401).send({ error: 'unauthorized' });
+      req.userId = uid;
+      return;
+    }
+    if (autoLogin) {
+      req.userId = adminId() ?? 0;
+      return;
+    }
+    const token = req.cookies[SESSION_COOKIE];
+    const session = auth.resolve(token);
+    if (!session) return reply.code(401).send({ error: 'unauthorized' });
+    if (session.renewed && token) setSessionCookie(reply, token);
+    req.userId = session.user.id;
+  });
+
+  // ---------- вход ----------
+  app.post(
+    '/api/login',
+    {
+      config: {
+        rateLimit: {
+          ...loginLimit,
+          errorResponseBuilder: () => ({
+            statusCode: 429,
+            error: 'too_many_attempts',
+            message: 'Слишком много попыток, подожди минуту',
+          }),
+        },
+      },
+    },
+    async (req, reply) => {
+      const { username, password } = parse(Login, req.body);
+      const res = await auth.login(username, password, req.headers['user-agent']);
+      if (!res)
+        return reply
+          .code(401)
+          .send({ error: 'bad_credentials', message: 'Неверный логин или пароль' });
+      setSessionCookie(reply, res.token);
+      return res.user;
+    },
+  );
+  app.post('/api/logout', async (req, reply) => {
+    auth.logout(req.cookies[SESSION_COOKIE]);
+    reply.clearCookie(SESSION_COOKIE, { path: '/' });
+    return reply.code(204).send();
+  });
+  app.get('/api/me', async (req) => {
+    const u = db.select().from(users).where(eq(users.id, req.userId)).get();
+    if (!u) throw new HttpError(401, 'unauthorized');
+    return { id: u.id, username: u.username, displayName: u.displayName, role: u.role };
   });
 
   app.setErrorHandler((err, _req, reply) => {
