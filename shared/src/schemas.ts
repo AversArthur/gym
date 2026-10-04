@@ -72,7 +72,8 @@ export const SyncOp = z.discriminatedUnion('op', [
   z.object({ op: z.literal('set.delete'), clientId }),
 ]);
 export type SyncOp = z.input<typeof SyncOp>;
-export const SyncRequest = z.object({ ops: z.array(SyncOp).max(500) });
+// Операции разбираются по одной: кривая операция получает ошибку, а не валит всю пачку
+export const SyncRequest = z.object({ ops: z.array(z.unknown()).max(500) });
 
 const ProgramItemFields = z.object({
   exerciseId: z.string().min(1).max(64),

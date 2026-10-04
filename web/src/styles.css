@@ -1108,3 +1108,25 @@ textarea {
   gap: 10px;
   margin-top: 14px;
 }
+
+/* ---------- синхронизация ---------- */
+.sync-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.sync-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--c);
+}
+.sync-badge.wait .sync-dot {
+  background: #d99a1c;
+}
+.sync-badge.warn .sync-dot {
+  background: var(--a);
+}

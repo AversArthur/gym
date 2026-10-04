@@ -13,6 +13,7 @@ import {
   ProgramItemPatch,
   SetPatch,
   SetUpsert,
+  SyncOp,
   SyncRequest,
   WeekReportQuery,
   WorkoutCreate,
@@ -135,6 +136,9 @@ export function buildApp({ db, logger = false, resolveUser }: AppOptions): Fasti
     return repo.listWorkouts(req.userId, q.limit, q.before);
   });
   app.get('/api/workouts/active', async (req) => repo.activeWorkout(req.userId));
+  app.get('/api/workouts/by-client/:id', async (req) =>
+    repo.getWorkoutByClientId(req.userId, parse(ExerciseIdParam, req.params).id),
+  );
   app.get('/api/workouts/:id', async (req) =>
     repo.getWorkout(req.userId, parse(IdParam, req.params).id),
   );
@@ -166,7 +170,10 @@ export function buildApp({ db, logger = false, resolveUser }: AppOptions): Fasti
   app.post('/api/sync', async (req) => {
     const { ops } = parse(SyncRequest, req.body);
     const uid = req.userId;
-    const results: SyncResult[] = ops.map((op) => {
+    const results: SyncResult[] = ops.map((raw) => {
+      const parsed = SyncOp.safeParse(raw);
+      if (!parsed.success) return { ok: false, error: 'validation' };
+      const op = parsed.data;
       try {
         switch (op.op) {
           case 'workout.create':

@@ -292,6 +292,39 @@ describe('идемпотентность по client_id', () => {
     expect(detail).toMatchObject({ notes: 'ок', dayCode: 'B', finishedAt: T0 + 3_600_000 });
   });
 
+  it('/api/sync: невалидная операция получает ошибку, остальные проходят', async () => {
+    const w = await startWorkout('A', T0);
+    const r = await api<{ results: { ok: boolean; error?: string }[] }>('POST', '/api/sync', {
+      ops: [
+        { op: 'set.upsert', set: { clientId: 'x' } },
+        { op: 'nope' },
+        {
+          op: 'set.upsert',
+          set: {
+            clientId: 'valid-0001',
+            workoutId: w,
+            exerciseId: 'squat',
+            setIndex: 0,
+            weight: 40,
+            reps: 10,
+          },
+        },
+      ],
+    });
+    expect(r.status).toBe(200);
+    expect(r.body.results.map((x) => x.error ?? 'ok')).toEqual(['validation', 'validation', 'ok']);
+  });
+
+  it('у каждой тренировки есть client_id; поиск по нему', async () => {
+    const r = await api<{ id: number; clientId: string }>('POST', '/api/workouts', {
+      programDayId: dayId('A'),
+    });
+    expect(r.body.clientId).toMatch(/^[0-9a-f-]{36}$/);
+    const byClient = await api<{ id: number }>('GET', `/api/workouts/by-client/${r.body.clientId}`);
+    expect(byClient.body.id).toBe(r.body.id);
+    expect((await api('GET', '/api/workouts/by-client/unknown-id')).status).toBe(404);
+  });
+
   it('/api/sync: ошибка одной операции не ломает остальные', async () => {
     const w = await startWorkout('A', T0);
     const r = await api<{ results: { ok: boolean; error?: string }[] }>('POST', '/api/sync', {

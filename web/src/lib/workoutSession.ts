@@ -1,5 +1,5 @@
-// Состояние идущей тренировки: подходы с сервера + оптимистичные изменения + UI-черновики.
-// Вся запись проходит через saveSet/removeSet — в фазе 8 сюда встанет офлайн-очередь.
+// Идущая тренировка, local-first: источник правды — копия в IndexedDB,
+// каждое изменение кладётся в очередь и уходит на сервер, когда есть сеть.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   uuid,
@@ -10,9 +10,11 @@ import {
   type WorkoutPatch,
   type WorkoutSet,
 } from '@gym/shared';
-import { api, get } from './api';
-import { loadProgram } from './program';
+import { get } from './api';
+import { loadLastAll, loadProgram } from './program';
 import { store } from './storage';
+import { localWorkouts, type LocalWorkout } from './offline/idb';
+import { enqueue } from './offline/outbox';
 
 export interface Draft {
   weight?: string;
@@ -32,18 +34,85 @@ export const draftKey = (exerciseId: string, setIndex: number) => `${exerciseId}
 
 export type SetStatus = 'saving' | 'error';
 
-export function useWorkoutSession(workoutId: number) {
+/** Начать тренировку: локальная запись + операция в очереди. Работает без сети. */
+export async function startWorkout(program: ActiveProgram, dayId: number): Promise<string> {
+  const day = program.days.find((d) => d.id === dayId)!;
+  const lastAll = await loadLastAll(program);
+  const last: LastMap = Object.fromEntries(
+    day.items.map((i) => [i.exerciseId, lastAll[i.exerciseId] ?? null]),
+  );
+  const w: LocalWorkout = {
+    clientId: uuid(),
+    programDayId: day.id,
+    dayCode: day.code,
+    startedAt: Date.now(),
+    finishedAt: null,
+    notes: null,
+    sets: [],
+    last,
+  };
+  await localWorkouts.put(w);
+  await enqueue({
+    op: 'workout.create',
+    clientId: w.clientId,
+    programDayId: day.id,
+    startedAt: w.startedAt,
+  });
+  return w.clientId;
+}
+
+/** Тренировка с сервера → локальная копия (например, начатая на другом устройстве). */
+async function fromServer(clientId: string): Promise<LocalWorkout> {
+  const w = await get<WorkoutDetail>(`/api/workouts/by-client/${clientId}`);
+  const p = await loadProgram();
+  const ids = new Set(w.sets.map((s) => s.exerciseId));
+  p.days.find((d) => d.id === w.programDayId)?.items.forEach((i) => ids.add(i.exerciseId));
+  const last = ids.size
+    ? await get<LastMap>(`/api/exercises/last?ids=${[...ids].join(',')}&exclude=${w.id}`)
+    : {};
+  return {
+    clientId,
+    serverId: w.id,
+    programDayId: w.programDayId,
+    dayCode: w.dayCode,
+    startedAt: w.startedAt,
+    finishedAt: w.finishedAt,
+    notes: w.notes,
+    sets: w.sets,
+    last,
+  };
+}
+
+export async function loadLocalOrServer(clientId: string): Promise<LocalWorkout> {
+  const local = await localWorkouts.get(clientId);
+  if (local) return local;
+  const w = await fromServer(clientId);
+  if (w.finishedAt == null) await localWorkouts.put(w);
+  return w;
+}
+
+export function useWorkoutSession(clientId: string) {
   const [program, setProgram] = useState<ActiveProgram>();
-  const [workout, setWorkout] = useState<WorkoutDetail>();
-  const [last, setLast] = useState<LastMap>({});
+  const [workout, setWorkout] = useState<LocalWorkout>();
   const [error, setError] = useState<Error>();
-  const [status, setStatus] = useState<Record<string, SetStatus>>({});
-  const uiKey = `workout-ui:${workoutId}`;
+  const uiKey = `workout-ui:${clientId}`;
   const [ui, setUiState] = useState<UiState>(() => store.get<UiState>(uiKey) ?? emptyUi());
-  const workoutRef = useRef(workout);
+  const ref = useRef<LocalWorkout | undefined>(undefined);
+
   useEffect(() => {
-    workoutRef.current = workout;
-  }, [workout]);
+    let alive = true;
+    Promise.all([loadProgram(), loadLocalOrServer(clientId)])
+      .then(([p, w]) => {
+        if (!alive) return;
+        ref.current = w;
+        setProgram(p);
+        setWorkout(w);
+      })
+      .catch((e: Error) => alive && setError(e));
+    return () => {
+      alive = false;
+    };
+  }, [clientId]);
 
   const setUi = useCallback(
     (fn: (u: UiState) => UiState) =>
@@ -55,103 +124,99 @@ export function useWorkoutSession(workoutId: number) {
     [uiKey],
   );
 
-  useEffect(() => {
-    let alive = true;
-    Promise.all([loadProgram(), get<WorkoutDetail>(`/api/workouts/${workoutId}`)])
-      .then(async ([p, w]) => {
-        const ids = new Set<string>(w.sets.map((s) => s.exerciseId));
-        p.days.find((d) => d.id === w.programDayId)?.items.forEach((i) => ids.add(i.exerciseId));
-        const l = ids.size
-          ? await get<LastMap>(`/api/exercises/last?ids=${[...ids].join(',')}&exclude=${w.id}`)
-          : {};
-        if (!alive) return;
-        setProgram(p);
-        setWorkout(w);
-        setLast(l);
-      })
-      .catch((e: Error) => alive && setError(e));
-    return () => {
-      alive = false;
-    };
-  }, [workoutId]);
+  /** Обновить локальную копию: состояние React + IndexedDB. */
+  const commit = useCallback((fn: (w: LocalWorkout) => LocalWorkout) => {
+    const cur = ref.current;
+    if (!cur) return;
+    const next = fn(cur);
+    ref.current = next;
+    setWorkout(next);
+    void localWorkouts.put(next);
+  }, []);
 
-  const replaceSet = (clientId: string, next: WorkoutSet | null) =>
-    setWorkout((w) => {
-      if (!w) return w;
-      const rest = w.sets.filter((s) => s.clientId !== clientId);
-      return { ...w, sets: next ? [...rest, next] : rest };
-    });
-
-  /** Сохраняет подход (новый или правку). Сразу показывает его сохранённым, откатывает статус при ошибке. */
   const saveSet = useCallback(
-    async (input: Omit<SetUpsert, 'clientId' | 'workoutId'> & { clientId?: string }) => {
-      const w = workoutRef.current;
+    async (input: Omit<SetUpsert, 'clientId' | 'workoutId' | 'workoutClientId'>) => {
+      const w = ref.current;
       if (!w) return;
       const existing = w.sets.find(
         (s) => s.exerciseId === input.exerciseId && s.setIndex === input.setIndex,
       );
-      const clientId = input.clientId ?? existing?.clientId ?? uuid();
-      const body: SetUpsert = {
-        ...input,
-        clientId,
-        workoutId: w.id,
-        completedAt: existing?.completedAt ?? Date.now(),
-      };
-      const optimistic: WorkoutSet = {
+      const set: WorkoutSet = {
         id: existing?.id ?? -1,
-        workoutId: w.id,
+        workoutId: w.serverId ?? -1,
         exerciseId: input.exerciseId,
         setIndex: input.setIndex,
         weight: input.weight ?? null,
         reps: input.reps ?? null,
         durationSec: input.durationSec ?? null,
         rir: input.rir ?? null,
-        completedAt: body.completedAt!,
-        clientId,
+        completedAt: existing?.completedAt ?? Date.now(),
+        clientId: existing?.clientId ?? uuid(),
       };
-      replaceSet(clientId, optimistic);
-      setStatus((s) => ({ ...s, [clientId]: 'saving' }));
-      try {
-        const saved = await api<WorkoutSet>('POST', '/api/sets', body);
-        replaceSet(clientId, saved);
-        setStatus(({ [clientId]: _, ...s }) => s);
-      } catch {
-        setStatus((s) => ({ ...s, [clientId]: 'error' }));
-      }
+      commit((cur) => ({
+        ...cur,
+        sets: [...cur.sets.filter((s) => s.clientId !== set.clientId), set],
+      }));
+      await enqueue({
+        op: 'set.upsert',
+        set: {
+          clientId: set.clientId,
+          workoutClientId: w.clientId,
+          exerciseId: set.exerciseId,
+          setIndex: set.setIndex,
+          weight: set.weight,
+          reps: set.reps,
+          durationSec: set.durationSec,
+          rir: set.rir,
+          completedAt: set.completedAt,
+        },
+      });
     },
-    [],
+    [commit],
   );
 
-  const removeSet = useCallback(async (set: WorkoutSet) => {
-    replaceSet(set.clientId, null);
-    try {
-      if (set.id > 0) await api('DELETE', `/api/sets/${set.id}`);
-    } catch {
-      replaceSet(set.clientId, set);
-      setStatus((s) => ({ ...s, [set.clientId]: 'error' }));
-    }
-  }, []);
+  const removeSet = useCallback(
+    async (set: WorkoutSet) => {
+      commit((cur) => ({ ...cur, sets: cur.sets.filter((s) => s.clientId !== set.clientId) }));
+      await enqueue({ op: 'set.delete', clientId: set.clientId });
+    },
+    [commit],
+  );
 
-  const patchWorkout = useCallback(async (patch: WorkoutPatch) => {
-    const w = workoutRef.current;
-    if (!w) return;
-    const saved = await api<WorkoutDetail>('PATCH', `/api/workouts/${w.id}`, patch);
-    setWorkout((cur) => (cur ? { ...cur, ...saved, sets: cur.sets } : cur));
-  }, []);
+  const patchWorkout = useCallback(
+    async (patch: WorkoutPatch) => {
+      const w = ref.current;
+      if (!w) return;
+      commit((cur) => ({
+        ...cur,
+        ...(patch.finishedAt !== undefined ? { finishedAt: patch.finishedAt } : {}),
+        ...(patch.notes !== undefined ? { notes: patch.notes } : {}),
+      }));
+      await enqueue({ op: 'workout.update', clientId: w.clientId, patch });
+    },
+    [commit],
+  );
+
+  const discard = useCallback(async () => {
+    await localWorkouts.delete(clientId);
+    await enqueue({ op: 'workout.delete', clientId });
+    store.remove(uiKey);
+  }, [clientId, uiKey]);
 
   const clearUi = useCallback(() => store.remove(uiKey), [uiKey]);
 
   return {
     program,
     workout,
-    last,
+    last: workout?.last ?? {},
     error,
-    status,
+    status: {} as Record<string, SetStatus>,
     ui,
     setUi,
     saveSet,
     removeSet,
     patchWorkout,
+    discard,
     clearUi,
   };
 }

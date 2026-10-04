@@ -2,40 +2,82 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import {
   nextDayCode,
-  uuid,
-  type ActiveProgram,
   type BodyweightEntry,
   type DayCode,
-  type Workout,
   type WorkoutDetail,
   type WorkoutListItem,
 } from '@gym/shared';
 import { api, get } from '../lib/api';
 import { formatDate, formatRange, localDate } from '../lib/format';
-import { loadProgram } from '../lib/program';
+import { loadLastAll, loadProgram } from '../lib/program';
+import { cachedGet } from '../lib/offline/cachedGet';
+import { localWorkouts } from '../lib/offline/idb';
+import { startWorkout } from '../lib/workoutSession';
+import { SyncBadge } from '../components/SyncBadge';
 import { useDayColor } from '../lib/useDayColor';
 import { useLoad } from '../lib/useLoad';
 import { formatKg, parseKg } from '@gym/shared';
+
+interface ActiveRef {
+  clientId: string;
+  dayCode: DayCode | null;
+  startedAt: number;
+  sets: number;
+}
 
 // Возврат в незавершённую тренировку — один раз при открытии приложения
 let resumeChecked = false;
 
 export function TodayPage() {
   const [, navigate] = useLocation();
-  const { data, error } = useLoad(
-    () =>
-      Promise.all([
-        loadProgram(),
-        get<WorkoutDetail | null>('/api/workouts/active'),
-        get<WorkoutListItem[]>('/api/workouts?limit=1'),
-      ]) as Promise<[ActiveProgram, WorkoutDetail | null, WorkoutListItem[]]>,
-    [],
-  );
+  const { data, error } = useLoad(async () => {
+    const [program, locals, recent] = await Promise.all([
+      loadProgram(),
+      localWorkouts.all(),
+      cachedGet<WorkoutListItem[]>('/api/workouts?limit=5', 'recent').catch(
+        () => [] as WorkoutListItem[],
+      ),
+    ]);
+    // Незавершённая: сначала локальная (могла начаться офлайн), потом серверная
+    const localActive = locals
+      .filter((w) => w.finishedAt == null)
+      .sort((a, b) => b.startedAt - a.startedAt)[0];
+    const serverActive = localActive
+      ? null
+      : await get<WorkoutDetail | null>('/api/workouts/active').catch(() => null);
+    const active: ActiveRef | null = localActive
+      ? {
+          clientId: localActive.clientId,
+          dayCode: localActive.dayCode,
+          startedAt: localActive.startedAt,
+          sets: localActive.sets.length,
+        }
+      : serverActive
+        ? {
+            clientId: serverActive.clientId!,
+            dayCode: serverActive.dayCode,
+            startedAt: serverActive.startedAt,
+            sets: serverActive.sets.length,
+          }
+        : null;
+    // Ротация по последней тренировке — с учётом ещё не отправленных локальных
+    const done = [
+      ...recent
+        .filter((w) => w.finishedAt != null)
+        .map((w) => ({ startedAt: w.startedAt, dayCode: w.dayCode })),
+      ...locals
+        .filter((w) => w.finishedAt != null)
+        .map((w) => ({ startedAt: w.startedAt, dayCode: w.dayCode })),
+    ].sort((a, b) => b.startedAt - a.startedAt);
+    void loadLastAll(program); // прогрев «прошлого раза» для офлайн-старта
+    return { program, active, lastDone: done[0] ?? null };
+  }, []);
   const [picked, setPicked] = useState<DayCode>();
   const [starting, setStarting] = useState(false);
 
-  const [program, active, recent] = data ?? [];
-  const lastDone = recent?.find((w) => w.finishedAt != null) ?? recent?.[0];
+  const program = data?.program;
+  const active = data?.active;
+  const lastDone = data?.lastDone;
   const codes = program?.days.map((d) => d.code) ?? [];
   const suggested = nextDayCode(lastDone?.dayCode, codes);
   const code = picked ?? suggested;
@@ -45,19 +87,15 @@ export function TodayPage() {
   useEffect(() => {
     if (!resumeChecked && data) {
       resumeChecked = true;
-      if (active) navigate(`/workout/${active.id}`, { replace: true });
+      if (active) navigate(`/workout/${active.clientId}`, { replace: true });
     }
   }, [data, active, navigate]);
 
   async function start() {
-    if (!day) return;
+    if (!day || !program) return;
     setStarting(true);
     try {
-      const w = await api<Workout>('POST', '/api/workouts', {
-        programDayId: day.id,
-        clientId: uuid(),
-      });
-      navigate(`/workout/${w.id}`);
+      navigate(`/workout/${await startWorkout(program, day.id)}`);
     } catch (e) {
       setStarting(false);
       alert(`Не удалось начать: ${(e as Error).message}`);
@@ -70,12 +108,13 @@ export function TodayPage() {
   return (
     <section>
       <h1 className="page-title">Сегодня</h1>
+      <SyncBadge />
 
       {active && (
-        <Link href={`/workout/${active.id}`} className="card resume">
+        <Link href={`/workout/${active.clientId}`} className="card resume">
           <b>Идёт тренировка {active.dayCode}</b>
           <span className="muted">
-            начата {formatDate(active.startedAt)} · {active.sets.length} подх. — продолжить →
+            начата {formatDate(active.startedAt)} · {active.sets} подх. — продолжить →
           </span>
         </Link>
       )}

@@ -54,7 +54,11 @@ export function HistoryDetailPage() {
         {w.bodyweightKg != null && ` · вес тела ${formatKg(w.bodyweightKg)} кг`}
       </p>
       {!w.finishedAt && (
-        <Link href={`/workout/${w.id}`} className="btn primary wide" style={{ marginBottom: 12 }}>
+        <Link
+          href={`/workout/${w.clientId}`}
+          className="btn primary wide"
+          style={{ marginBottom: 12 }}
+        >
           Продолжить тренировку
         </Link>
       )}

@@ -2,13 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useParams } from 'wouter';
 import type { ProgramItem } from '@gym/shared';
 import { ExerciseCard } from '../components/ExerciseCard';
-import { api } from '../lib/api';
 import { unlockAudio } from '../lib/feedback';
 import { formatClock } from '../lib/format';
 import { restTimer } from '../lib/timer';
 import { useWakeLock } from '../lib/wakeLock';
 import { draftKey, useWorkoutSession } from '../lib/workoutSession';
 import { useDayColor } from '../lib/useDayColor';
+import { SyncBadge } from '../components/SyncBadge';
 
 /** Подряд идущие упражнения с одним superset_group — один блок. */
 function blocksOf(items: ProgramItem[]): ProgramItem[][] {
@@ -31,10 +31,9 @@ function restText(block: ProgramItem[]): string {
 }
 
 export function WorkoutPage() {
-  const params = useParams<{ id: string }>();
-  const workoutId = Number(params.id);
+  const { id: clientId } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
-  const s = useWorkoutSession(workoutId);
+  const s = useWorkoutSession(clientId);
   const { program, workout, last, ui, setUi } = s;
   const [now, setNow] = useState(() => Date.now());
   const [notes, setNotes] = useState<string | null>(null);
@@ -90,23 +89,20 @@ export function WorkoutPage() {
       <section>
         <h1 className="page-title">Тренировка завершена</h1>
         <div className="card">
-          <Link href={`/workout/${workout.id}/summary`}>Открыть итог</Link>
+          <Link href={`/workout/${workout.clientId}/summary`}>Открыть итог</Link>
         </div>
       </section>
     );
   }
 
-  const unsaved = Object.values(s.status).some((x) => x === 'error' || x === 'saving');
-
   async function finish() {
-    if (unsaved && !confirm('Есть несохранённые подходы. Всё равно завершить?')) return;
     if (!workout!.sets.length && !confirm('Ни одного подхода не записано. Завершить?')) return;
     setFinishing(true);
     try {
       await s.patchWorkout({ finishedAt: Date.now(), ...(notes != null ? { notes } : {}) });
       restTimer.stop();
       s.clearUi();
-      navigate(`/workout/${workout!.id}/summary`);
+      navigate(`/workout/${workout!.clientId}/summary`);
     } catch (e) {
       setFinishing(false);
       alert(`Не удалось завершить: ${(e as Error).message}`);
@@ -115,7 +111,7 @@ export function WorkoutPage() {
 
   async function discard() {
     if (!confirm('Удалить эту тренировку вместе со всеми подходами?')) return;
-    await api('DELETE', `/api/workouts/${workout!.id}`);
+    await s.discard();
     restTimer.stop();
     s.clearUi();
     navigate('/');
@@ -131,6 +127,7 @@ export function WorkoutPage() {
             {workout.dayCode ? `День ${workout.dayCode}` : 'Тренировка'}
             {day && <span className="sub">{day.title}</span>}
           </h1>
+          <SyncBadge />
           <p className="muted mono">
             {formatClock((now - workout.startedAt) / 1000)} · {workout.sets.length}/{totalPlanned}{' '}
             подходов

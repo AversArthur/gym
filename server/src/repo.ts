@@ -1,5 +1,6 @@
 // Доступ к данным. Каждая функция получает userId и видит только данные этого пользователя:
 // так изоляция для фазы 10 (несколько пользователей) уже заложена в одном месте.
+import { randomUUID } from 'node:crypto';
 import { and, asc, desc, eq, gte, inArray, isNull, lt, lte, ne, or, sql } from 'drizzle-orm';
 import {
   e1rm,
@@ -296,7 +297,8 @@ export function createRepo(db: DB) {
         userId,
         programDayId: day.id,
         dayCode: day.code,
-        clientId: input.clientId ?? null,
+        // client_id есть у каждой тренировки: по нему клиент ссылается на неё офлайн
+        clientId: input.clientId ?? randomUUID(),
         startedAt: new Date(input.startedAt ?? Date.now()),
       })
       .returning()
@@ -316,6 +318,12 @@ export function createRepo(db: DB) {
 
   function getWorkout(userId: number, id: number): WorkoutDetail {
     const w = ownedWorkout(userId, id);
+    return { ...toWorkout(w), sets: setsOf([w.id]).sort(bySetOrder) };
+  }
+
+  function getWorkoutByClientId(userId: number, clientId: string): WorkoutDetail {
+    const w = workoutByClientId(userId, clientId);
+    if (!w) throw notFound('Тренировка');
     return { ...toWorkout(w), sets: setsOf([w.id]).sort(bySetOrder) };
   }
 
@@ -704,6 +712,7 @@ export function createRepo(db: DB) {
     patchDay,
     createWorkout,
     getWorkout,
+    getWorkoutByClientId,
     activeWorkout,
     listWorkouts,
     patchWorkout,
