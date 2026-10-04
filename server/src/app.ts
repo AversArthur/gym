@@ -7,6 +7,9 @@ import {
   HistoryQuery,
   IdParam,
   LastQuery,
+  ProgramDayOrder,
+  ProgramDayPatch,
+  ProgramItemCreate,
   ProgramItemPatch,
   SetPatch,
   SetUpsert,
@@ -82,6 +85,29 @@ export function buildApp({ db, logger = false, resolveUser }: AppOptions): Fasti
       parse(IdParam, req.params).id,
       parse(ProgramItemPatch, req.body),
     ),
+  );
+  app.post('/api/program/days/:id/items', async (req, reply) => {
+    const item = repo.addProgramItem(
+      req.userId,
+      parse(IdParam, req.params).id,
+      parse(ProgramItemCreate, req.body),
+    );
+    return reply.code(201).send(item);
+  });
+  app.delete('/api/program/items/:id', async (req, reply) => {
+    repo.deleteProgramItem(req.userId, parse(IdParam, req.params).id);
+    return reply.code(204).send();
+  });
+  app.put('/api/program/days/:id/order', async (req, reply) => {
+    repo.reorderDay(
+      req.userId,
+      parse(IdParam, req.params).id,
+      parse(ProgramDayOrder, req.body).itemIds,
+    );
+    return reply.code(204).send();
+  });
+  app.patch('/api/program/days/:id', async (req) =>
+    repo.patchDay(req.userId, parse(IdParam, req.params).id, parse(ProgramDayPatch, req.body)),
   );
   app.get('/api/exercises', async (req) => repo.listExercises(req.userId));
   app.get('/api/exercises/last', async (req) => {

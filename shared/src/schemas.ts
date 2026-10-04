@@ -74,23 +74,48 @@ export const SyncOp = z.discriminatedUnion('op', [
 export type SyncOp = z.input<typeof SyncOp>;
 export const SyncRequest = z.object({ ops: z.array(SyncOp).max(500) });
 
-export const ProgramItemPatch = z
-  .object({
-    exerciseId: z.string().min(1).max(64),
-    position: z.number().int().min(0).max(100),
-    sets: z.number().int().min(1).max(20),
-    repMin: z.number().int().min(1).max(1000).nullable(),
-    repMax: z.number().int().min(1).max(1000).nullable(),
-    unit: z.enum(REP_UNITS),
-    supersetGroup: z.number().int().min(1).max(50).nullable(),
-    restSec: z.number().int().min(0).max(1800),
-    weightStep: z.number().min(0.25).max(50),
-  })
-  .partial()
-  .refine((v) => v.repMin == null || v.repMax == null || v.repMin <= v.repMax, {
-    message: 'repMin больше repMax',
-  });
+const ProgramItemFields = z.object({
+  exerciseId: z.string().min(1).max(64),
+  position: z.number().int().min(0).max(100),
+  sets: z.number().int().min(1).max(20),
+  repMin: z.number().int().min(1).max(1000).nullable(),
+  repMax: z.number().int().min(1).max(1000).nullable(),
+  unit: z.enum(REP_UNITS),
+  supersetGroup: z.number().int().min(1).max(50).nullable(),
+  restSec: z.number().int().min(0).max(1800),
+  weightStep: z.number().min(0.25).max(50),
+});
+const rangeOk = (v: { repMin?: number | null; repMax?: number | null }) =>
+  v.repMin == null || v.repMax == null || v.repMin <= v.repMax;
+
+export const ProgramItemPatch = ProgramItemFields.partial().refine(rangeOk, {
+  message: 'repMin больше repMax',
+});
 export type ProgramItemPatch = z.infer<typeof ProgramItemPatch>;
+
+/** Новое упражнение в дне: позиция — в конец, остальное по умолчанию. */
+export const ProgramItemCreate = ProgramItemFields.omit({ position: true })
+  .extend({
+    sets: ProgramItemFields.shape.sets.default(3),
+    repMin: ProgramItemFields.shape.repMin.default(10),
+    repMax: ProgramItemFields.shape.repMax.default(12),
+    unit: ProgramItemFields.shape.unit.default('reps'),
+    supersetGroup: ProgramItemFields.shape.supersetGroup.default(null),
+    restSec: ProgramItemFields.shape.restSec.default(90),
+    weightStep: ProgramItemFields.shape.weightStep.default(2.5),
+  })
+  .refine(rangeOk, { message: 'repMin больше repMax' });
+export type ProgramItemCreate = z.input<typeof ProgramItemCreate>;
+
+export const ProgramDayPatch = z.object({
+  title: z.string().trim().min(1).max(60).optional(),
+  subtitle: z.string().trim().max(200).nullable().optional(),
+});
+export type ProgramDayPatch = z.infer<typeof ProgramDayPatch>;
+
+export const ProgramDayOrder = z.object({
+  itemIds: z.array(z.number().int().positive()).min(1).max(100),
+});
 
 export const HistoryQuery = z.object({
   from: z.coerce.number().int().nonnegative().optional(),

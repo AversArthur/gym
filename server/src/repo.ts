@@ -12,6 +12,8 @@ import {
   type HistoryPoint,
   type LastMap,
   type ProgramItem,
+  type ProgramDayPatch,
+  type ProgramItemCreate,
   type ProgramItemPatch,
   type SetPatch,
   type SetUpsert,
@@ -177,6 +179,63 @@ export function createRepo(db: DB) {
     if (Object.keys(patch).length)
       db.update(programItems).set(patch).where(eq(programItems.id, itemId)).run();
     return db.select().from(programItems).where(eq(programItems.id, itemId)).get()!;
+  }
+
+  function addProgramItem(userId: number, dayId: number, input: ProgramItemCreate): ProgramItem {
+    if (!ownedDay(userId, dayId)) throw notFound('День программы');
+    assertExerciseVisible(userId, input.exerciseId);
+    const [row] = db
+      .select({ max: sql<number | null>`max(${programItems.position})` })
+      .from(programItems)
+      .where(eq(programItems.dayId, dayId))
+      .all();
+    return db
+      .insert(programItems)
+      .values({ ...(input as Required<ProgramItemCreate>), dayId, position: (row?.max ?? -1) + 1 })
+      .returning()
+      .get();
+  }
+
+  function ownedItem(userId: number, itemId: number) {
+    const row = db
+      .select({ item: programItems })
+      .from(programItems)
+      .innerJoin(programDays, eq(programItems.dayId, programDays.id))
+      .innerJoin(programs, eq(programDays.programId, programs.id))
+      .where(and(eq(programItems.id, itemId), eq(programs.userId, userId)))
+      .get();
+    if (!row) throw notFound('Упражнение программы');
+    return row.item;
+  }
+
+  /** Удаление из программы. История не страдает: подходы ссылаются на упражнение, а не на пункт программы. */
+  function deleteProgramItem(userId: number, itemId: number) {
+    ownedItem(userId, itemId);
+    db.delete(programItems).where(eq(programItems.id, itemId)).run();
+  }
+
+  /** Новый порядок упражнений дня: itemIds — все пункты дня в нужном порядке. */
+  function reorderDay(userId: number, dayId: number, itemIds: number[]) {
+    if (!ownedDay(userId, dayId)) throw notFound('День программы');
+    const current = db
+      .select({ id: programItems.id })
+      .from(programItems)
+      .where(eq(programItems.dayId, dayId))
+      .all();
+    const same = current.length === itemIds.length && current.every((c) => itemIds.includes(c.id));
+    if (!same) throw new HttpError(400, 'invalid_order', 'Список не совпадает с упражнениями дня');
+    db.transaction((tx) => {
+      itemIds.forEach((id, position) =>
+        tx.update(programItems).set({ position }).where(eq(programItems.id, id)).run(),
+      );
+    });
+  }
+
+  function patchDay(userId: number, dayId: number, patch: ProgramDayPatch) {
+    if (!ownedDay(userId, dayId)) throw notFound('День программы');
+    if (Object.keys(patch).length)
+      db.update(programDays).set(patch).where(eq(programDays.id, dayId)).run();
+    return db.select().from(programDays).where(eq(programDays.id, dayId)).get()!;
   }
 
   // ---------- тренировки ----------
@@ -615,6 +674,10 @@ export function createRepo(db: DB) {
     listExercises,
     getActiveProgram,
     updateProgramItem,
+    addProgramItem,
+    deleteProgramItem,
+    reorderDay,
+    patchDay,
     createWorkout,
     getWorkout,
     activeWorkout,

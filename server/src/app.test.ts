@@ -99,6 +99,70 @@ describe('программа', () => {
   });
 });
 
+describe('редактор программы', () => {
+  it('добавить упражнение в конец дня с дефолтами, удалить, переставить', async () => {
+    const day = program.days[0]!;
+    const add = await api<{
+      id: number;
+      position: number;
+      sets: number;
+      repMin: number;
+      restSec: number;
+    }>('POST', `/api/program/days/${day.id}/items`, { exerciseId: 'lateral' });
+    expect(add.status).toBe(201);
+    expect(add.body).toMatchObject({
+      position: day.items.length,
+      sets: 3,
+      repMin: 10,
+      restSec: 90,
+    });
+
+    const ids = [add.body.id, ...day.items.map((i) => i.id)];
+    expect((await api('PUT', `/api/program/days/${day.id}/order`, { itemIds: ids })).status).toBe(
+      204,
+    );
+    let p = (await api<ActiveProgram>('GET', '/api/program/active')).body;
+    expect(p.days[0]!.items[0]!.exerciseId).toBe('lateral');
+    // Неполный список — отказ
+    expect(
+      (await api('PUT', `/api/program/days/${day.id}/order`, { itemIds: ids.slice(1) })).status,
+    ).toBe(400);
+
+    expect((await api('DELETE', `/api/program/items/${add.body.id}`)).status).toBe(204);
+    p = (await api<ActiveProgram>('GET', '/api/program/active')).body;
+    expect(p.days[0]!.items.map((i) => i.exerciseId)).not.toContain('lateral');
+  });
+
+  it('переименовать день; неизвестное упражнение и чужой день — ошибка', async () => {
+    const day = program.days[1]!;
+    const r = await api<{ title: string }>('PATCH', `/api/program/days/${day.id}`, {
+      title: 'Спина',
+    });
+    expect(r.body.title).toBe('Спина');
+    expect(
+      (await api('POST', `/api/program/days/${day.id}/items`, { exerciseId: 'nope' })).status,
+    ).toBe(400);
+    expect((await api('POST', '/api/program/days/999/items', { exerciseId: 'squat' })).status).toBe(
+      404,
+    );
+  });
+
+  it('замена и удаление упражнения в программе не трогают историю', async () => {
+    const w = await startWorkout('A', T0);
+    await addSets(w, 'squat', [[40, 10]], 'hist');
+    const squatItem = program.days[0]!.items.find((i) => i.exerciseId === 'squat')!;
+    await api('PUT', `/api/program/items/${squatItem.id}`, { exerciseId: 'legpress' });
+    let detail = (await api<WorkoutDetail>('GET', `/api/workouts/${w}`)).body;
+    expect(detail.sets[0]!.exerciseId).toBe('squat');
+    await api('DELETE', `/api/program/items/${squatItem.id}`);
+    detail = (await api<WorkoutDetail>('GET', `/api/workouts/${w}`)).body;
+    expect(detail.sets).toHaveLength(1);
+    expect((await api<LastMap>('GET', '/api/exercises/last?ids=squat')).body.squat!.workoutId).toBe(
+      w,
+    );
+  });
+});
+
 describe('«в прошлый раз»', () => {
   it('берёт последнюю по дате тренировку с этим упражнением, исключая текущую', async () => {
     const w1 = await startWorkout('A', T0);
