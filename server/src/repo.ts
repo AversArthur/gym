@@ -228,6 +228,30 @@ export function createRepo(db: DB) {
       itemIds.forEach((id, position) =>
         tx.update(programItems).set({ position }).where(eq(programItems.id, id)).run(),
       );
+      // Суперсет, который перестал идти подряд, распускаем: иначе у первого упражнения останется отдых 0
+      const ordered = tx
+        .select()
+        .from(programItems)
+        .where(eq(programItems.dayId, dayId))
+        .orderBy(asc(programItems.position))
+        .all();
+      const groups = new Map<number, number[]>();
+      ordered.forEach((it, i) => {
+        if (it.supersetGroup != null)
+          groups.set(it.supersetGroup, [...(groups.get(it.supersetGroup) ?? []), i]);
+      });
+      for (const idx of groups.values()) {
+        const consecutive = idx.length > 1 && idx.every((v, k) => k === 0 || v === idx[k - 1]! + 1);
+        if (consecutive) continue;
+        const rest = Math.max(...idx.map((i) => ordered[i]!.restSec));
+        for (const i of idx) {
+          const it = ordered[i]!;
+          tx.update(programItems)
+            .set({ supersetGroup: null, restSec: it.restSec || rest })
+            .where(eq(programItems.id, it.id))
+            .run();
+        }
+      }
     });
   }
 

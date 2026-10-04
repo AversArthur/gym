@@ -133,6 +133,21 @@ describe('редактор программы', () => {
     expect(p.days[0]!.items.map((i) => i.exerciseId)).not.toContain('lateral');
   });
 
+  it('перестановка, разрывающая суперсет, распускает пару и возвращает отдых', async () => {
+    const day = program.days[0]!;
+    const [squat, bench, pulldown, dbpress, ...rest] = day.items.map((i) => i.id);
+    await api('PUT', `/api/program/days/${day.id}/order`, {
+      itemIds: [squat, bench, dbpress, pulldown, ...rest],
+    });
+    const p = (await api<ActiveProgram>('GET', '/api/program/active')).body.days[0]!.items;
+    const byEx = Object.fromEntries(p.map((i) => [i.exerciseId, i]));
+    expect(byEx.bench).toMatchObject({ supersetGroup: null, restSec: 90 });
+    expect(byEx.pulldown).toMatchObject({ supersetGroup: null, restSec: 90 });
+    // Пара бицепс + трицепс не тронута
+    expect(byEx.curl!.supersetGroup).toBe(2);
+    expect(byEx.pushdown!.supersetGroup).toBe(2);
+  });
+
   it('переименовать день; неизвестное упражнение и чужой день — ошибка', async () => {
     const day = program.days[1]!;
     const r = await api<{ title: string }>('PATCH', `/api/program/days/${day.id}`, {
