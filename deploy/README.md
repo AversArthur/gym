@@ -52,7 +52,8 @@ docker compose exec app node server/dist/cli/set-password.js arthur   # зада
 cp deploy/nginx/gym.arturavers.com.conf /etc/nginx/sites-available/gym.arturavers.com
 ln -s ../sites-available/gym.arturavers.com /etc/nginx/sites-enabled/gym.arturavers.com
 nginx -t && systemctl reload nginx
-certbot --nginx -d gym.arturavers.com     # добавит 443 и редирект с http
+/root/certbot-venv/bin/certbot --nginx -d gym.arturavers.com   # добавит 443 и редирект с http
+# certbot на этом VPS стоит в venv; продление уже в crontab root: certbot renew каждую ночь в 03:00
 ```
 Проверка: открыть `https://gym.arturavers.com` на телефоне → вход → «На экран „Домой“».
 
