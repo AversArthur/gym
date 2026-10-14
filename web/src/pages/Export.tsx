@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { api, get } from '../lib/api';
-import { idb } from '../lib/offline/idb';
+import { cacheGet } from '../lib/offline/idb';
+import { LOGGED_OUT, type Me } from '../components/AuthGate';
+import { store } from '../lib/storage';
+import { useLoad } from '../lib/useLoad';
 import { useSyncStatus } from '../lib/offline/outbox';
 
 const PERIODS: [number, string][] = [
@@ -29,6 +32,7 @@ async function copyText(text: string): Promise<boolean> {
 
 function Logout() {
   const { pending } = useSyncStatus();
+  const { data: me } = useLoad(() => cacheGet<Me>('me'), []);
   async function logout() {
     if (
       pending > 0 &&
@@ -38,11 +42,16 @@ function Logout() {
     )
       return;
     await api('POST', '/api/logout').catch(() => {});
-    await (await idb()).delete('cache', 'me');
+    store.set(LOGGED_OUT, true);
     location.href = '/';
   }
   return (
     <div className="workout-foot">
+      {me && (
+        <p className="muted small">
+          Вы вошли как <b>{me.displayName}</b> ({me.username})
+        </p>
+      )}
       <button type="button" className="link danger" onClick={logout}>
         Выйти из аккаунта
       </button>

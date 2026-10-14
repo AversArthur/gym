@@ -118,5 +118,6 @@ ufw allow 22/tcp && ufw allow 80/tcp && ufw allow 443/tcp && ufw enable
 | Бэкап сейчас | `docker compose exec -T app node server/dist/cli/backup.js` |
 | Скачать бэкап к себе | `scp root@78.47.246.235:/opt/gym/backups/gym-YYYY-MM-DD.db .` |
 
-Переменные окружения (`.env`): `APP_PORT` (3100), `COOKIE_SECURE` (true), `BACKUP_KEEP` (30).
+Переменные окружения (`.env`): `APP_PORT` (3100), `COOKIE_SECURE` (true), `BACKUP_KEEP` (30),
+`REGISTRATION_OPEN` (true; `false` закрывает регистрацию, после правки — `docker compose up -d`).
 Секретов в `.env` нет: пароль хранится в БД как argon2-хеш.

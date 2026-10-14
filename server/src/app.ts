@@ -10,6 +10,7 @@ import {
   IdParam,
   LastQuery,
   Login,
+  Register,
   ProgramDayOrder,
   ProgramDayPatch,
   ProgramItemCreate,
@@ -48,12 +49,21 @@ export interface AppOptions {
   /** За nginx: брать IP клиента из X-Forwarded-For (для лимита попыток входа). */
   trustProxy?: boolean | string;
   loginLimit?: { max: number; timeWindow: string };
+  /** Открытая регистрация (кнопка на экране входа). Выключается REGISTRATION_OPEN=false. */
+  registrationOpen?: boolean;
+  registerLimit?: { max: number; timeWindow: string };
 }
 
 const parse = <S extends z.ZodType>(schema: S, data: unknown): z.output<S> => schema.parse(data);
 
 /** Пути API, доступные без входа */
-const PUBLIC = new Set(['/api/health', '/api/login', '/api/logout']);
+const PUBLIC = new Set([
+  '/api/health',
+  '/api/login',
+  '/api/logout',
+  '/api/register',
+  '/api/config',
+]);
 
 export async function buildApp({
   db,
@@ -63,6 +73,8 @@ export async function buildApp({
   devAutoLogin = false,
   trustProxy = false,
   loginLimit = { max: 5, timeWindow: '1 minute' },
+  registrationOpen = true,
+  registerLimit = { max: 5, timeWindow: '1 hour' },
 }: AppOptions): Promise<FastifyInstance> {
   const app = Fastify({ logger, trustProxy });
   const repo = createRepo(db);
@@ -146,6 +158,33 @@ export async function buildApp({
       return res.user;
     },
   );
+  app.get('/api/config', async () => ({ registrationOpen }));
+  app.post(
+    '/api/register',
+    {
+      config: {
+        rateLimit: {
+          ...registerLimit,
+          errorResponseBuilder: () => ({
+            statusCode: 429,
+            error: 'too_many_attempts',
+            message: 'Слишком много регистраций с этого адреса, попробуй позже',
+          }),
+        },
+      },
+    },
+    async (req, reply) => {
+      if (!registrationOpen)
+        return reply
+          .code(403)
+          .send({ error: 'registration_closed', message: 'Регистрация закрыта' });
+      const res = await auth.register(parse(Register, req.body), req.headers['user-agent']);
+      if (!res)
+        return reply.code(409).send({ error: 'username_taken', message: 'Такой логин уже занят' });
+      setSessionCookie(reply, res.token);
+      return reply.code(201).send(res.user);
+    },
+  );
   app.post('/api/logout', async (req, reply) => {
     auth.logout(req.cookies[SESSION_COOKIE]);
     reply.clearCookie(SESSION_COOKIE, { path: '/' });
@@ -161,6 +200,7 @@ export async function buildApp({
     if (err instanceof ZodError) {
       return reply.code(400).send({
         error: 'validation',
+        message: err.issues[0]?.message,
         issues: err.issues.map((i) => ({ path: i.path.join('.'), message: i.message })),
       });
     }

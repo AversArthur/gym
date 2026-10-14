@@ -149,3 +149,14 @@ export const Login = z.object({
   username: z.string().trim().min(1).max(64),
   password: z.string().min(1).max(200),
 });
+
+export const Register = z.object({
+  username: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(/^[a-z0-9_.-]{3,32}$/, 'Логин: 3–32 символа, латиница, цифры, _ . -'),
+  displayName: z.string().trim().max(40).default(''),
+  password: z.string().min(8, 'Пароль не короче 8 символов').max(200),
+});
+export type Register = z.input<typeof Register>;

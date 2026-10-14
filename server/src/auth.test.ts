@@ -129,3 +129,75 @@ describe('вход', () => {
     expect((await login('new password 123')).statusCode).toBe(200);
   });
 });
+
+describe('регистрация', () => {
+  const reg = (body: object, a = app, headers: Record<string, string> = {}) =>
+    a.inject({ method: 'POST', url: '/api/register', payload: body, headers });
+
+  it('создаёт пользователя со своей программой и сразу входит', async () => {
+    const res = await reg({
+      username: 'Friend.1',
+      displayName: 'Друг',
+      password: 'friend-password',
+    });
+    expect(res.statusCode).toBe(201);
+    expect(res.json()).toMatchObject({ username: 'friend.1', displayName: 'Друг', role: 'user' });
+    const cookies = { [SESSION_COOKIE]: cookieOf(res)! };
+    const prog = (await app.inject({ url: '/api/program/active', cookies })).json();
+    expect(prog.days.map((d: { code: string }) => d.code)).toEqual(['A', 'B', 'C']);
+    // Своя копия: id программы не как у админа
+    const adminToken = cookieOf(await login())!;
+    const adminProg = (
+      await app.inject({ url: '/api/program/active', cookies: { [SESSION_COOKIE]: adminToken } })
+    ).json();
+    expect(prog.id).not.toBe(adminProg.id);
+    // Тем же логином-паролем можно войти
+    expect((await login('friend-password', 'friend.1')).statusCode).toBe(200);
+  });
+
+  it('новый пользователь не видит тренировки админа', async () => {
+    const adminCookies = { [SESSION_COOKIE]: cookieOf(await login())! };
+    const prog = (await app.inject({ url: '/api/program/active', cookies: adminCookies })).json();
+    await app.inject({
+      method: 'POST',
+      url: '/api/workouts',
+      payload: { programDayId: prog.days[0].id },
+      cookies: adminCookies,
+    });
+    const res = await reg({ username: 'friend', password: 'friend-password' });
+    const cookies = { [SESSION_COOKIE]: cookieOf(res)! };
+    expect((await app.inject({ url: '/api/workouts', cookies })).json()).toEqual([]);
+    expect((await app.inject({ url: '/api/workouts', cookies: adminCookies })).json()).toHaveLength(
+      1,
+    );
+  });
+
+  it('занятый логин — 409, плохой ввод — 400 с понятным текстом', async () => {
+    expect((await reg({ username: 'ARTHUR', password: 'whatever-123' })).statusCode).toBe(409);
+    const short = await reg({ username: 'ok_name', password: '123' });
+    expect(short.statusCode).toBe(400);
+    expect(short.json().message).toMatch(/8 символов/);
+    expect((await reg({ username: 'имя', password: 'whatever-123' })).statusCode).toBe(400);
+    expect((await reg({ username: 'ab', password: 'whatever-123' })).statusCode).toBe(400);
+  });
+
+  it('лимит регистраций с одного IP', async () => {
+    const limited = await buildApp({ db, registerLimit: { max: 2, timeWindow: '1 hour' } });
+    const codes = [];
+    for (let i = 0; i < 3; i++)
+      codes.push(
+        (await reg({ username: `user${i}`, password: 'whatever-123' }, limited)).statusCode,
+      );
+    expect(codes).toEqual([201, 201, 429]);
+  });
+
+  it('REGISTRATION_OPEN=false закрывает регистрацию', async () => {
+    const closed = await buildApp({ db, registrationOpen: false });
+    expect((await closed.inject({ url: '/api/config' })).json()).toEqual({
+      registrationOpen: false,
+    });
+    expect((await reg({ username: 'late', password: 'whatever-123' }, closed)).statusCode).toBe(
+      403,
+    );
+  });
+});

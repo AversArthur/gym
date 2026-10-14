@@ -4,6 +4,7 @@ import { hash, verify } from '@node-rs/argon2';
 import { and, eq, gt, lt } from 'drizzle-orm';
 import type { DB } from './db/client.js';
 import { sessions, users } from './db/schema.js';
+import { createStarterProgram } from './db/seed.js';
 
 export const SESSION_COOKIE = 'gym_session';
 export const SESSION_TTL_MS = 90 * 86_400_000;
@@ -23,6 +24,47 @@ export interface SessionUser {
 }
 
 export function createAuth(db: DB) {
+  function createSession(userId: number, userAgent?: string): string {
+    const token = randomBytes(32).toString('base64url');
+    db.insert(sessions)
+      .values({
+        id: sha256(token),
+        userId,
+        expiresAt: new Date(Date.now() + SESSION_TTL_MS),
+        userAgent: userAgent?.slice(0, 200) ?? null,
+      })
+      .run();
+    // Заодно чистим протухшие сессии
+    db.delete(sessions).where(lt(sessions.expiresAt, new Date())).run();
+    return token;
+  }
+
+  /** Открытая регистрация: пользователь + своя копия программы A·B·C + сессия. null — логин занят. */
+  async function register(
+    input: { username: string; displayName: string; password: string },
+    userAgent?: string,
+  ) {
+    const username = input.username.trim().toLowerCase();
+    if (db.select({ id: users.id }).from(users).where(eq(users.username, username)).get())
+      return null;
+    const passwordHash = await hash(input.password);
+    const user = db.transaction((tx) => {
+      const u = tx
+        .insert(users)
+        .values({
+          username,
+          displayName: input.displayName.trim() || username,
+          passwordHash,
+          role: 'user',
+        })
+        .returning()
+        .get();
+      createStarterProgram(tx, u.id);
+      return u;
+    });
+    return { token: createSession(user.id, userAgent), user: toSessionUser(user) };
+  }
+
   async function login(username: string, password: string, userAgent?: string) {
     const user = db
       .select()
@@ -32,18 +74,7 @@ export function createAuth(db: DB) {
     dummyHash ??= hash('dummy-password-for-timing');
     const ok = await verify(user?.passwordHash ?? (await dummyHash), password).catch(() => false);
     if (!user || !user.passwordHash || user.disabled || !ok) return null;
-    const token = randomBytes(32).toString('base64url');
-    db.insert(sessions)
-      .values({
-        id: sha256(token),
-        userId: user.id,
-        expiresAt: new Date(Date.now() + SESSION_TTL_MS),
-        userAgent: userAgent?.slice(0, 200) ?? null,
-      })
-      .run();
-    // Заодно чистим протухшие сессии
-    db.delete(sessions).where(lt(sessions.expiresAt, new Date())).run();
-    return { token, user: toSessionUser(user) };
+    return { token: createSession(user.id, userAgent), user: toSessionUser(user) };
   }
 
   /** Пользователь по токену; renewed=true — срок продлён, cookie нужно выставить заново. */
@@ -86,7 +117,7 @@ export function createAuth(db: DB) {
     db.delete(sessions).where(eq(sessions.userId, user.id)).run();
   }
 
-  return { login, resolve, logout, setPassword };
+  return { login, register, resolve, logout, setPassword };
 }
 export type Auth = ReturnType<typeof createAuth>;
 

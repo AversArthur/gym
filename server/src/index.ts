@@ -21,6 +21,7 @@ const app = await buildApp({
   // Порт открыт только на 127.0.0.1, снаружи ходит nginx: доверяем его X-Forwarded-For
   trustProxy: env.TRUST_PROXY === 'true' ? true : (env.TRUST_PROXY ?? false),
   devAutoLogin: env.DEV_AUTO_LOGIN === '1',
+  registrationOpen: env.REGISTRATION_OPEN !== 'false',
 });
 if (seedIfEmpty(db)) app.log.info('БД пустая: залит сид (упражнения, программа A·B·C)');
 if (

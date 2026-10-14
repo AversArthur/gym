@@ -394,6 +394,7 @@ nav.tabs {
   margin: 0;
 }
 input[type='text'],
+input[type='password'],
 textarea {
   font: inherit;
   color: var(--fg);
@@ -1150,4 +1151,18 @@ textarea {
 }
 .login-error {
   color: var(--a);
+}
+.login-form .card-title {
+  margin: 0;
+  font-size: 18px;
+}
+.login-form small {
+  font-size: 12px;
+}
+.login-switch {
+  text-align: center;
+}
+.login-switch .link {
+  min-height: 32px;
+  font-weight: 600;
 }
