@@ -358,30 +358,6 @@ nav.tabs {
   border-color: var(--day);
   margin-bottom: 4px;
 }
-.day-preview p {
-  margin: 0 0 8px;
-  font-size: 13.5px;
-}
-.day-preview ol {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 6px;
-}
-.day-preview li {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 14.5px;
-}
-.day-preview li.ss {
-  border-left: 3px solid var(--day);
-  padding-left: 8px;
-}
-.day-preview .small {
-  margin: 10px 0 0;
-}
 .bw label {
   font-weight: 600;
 }
@@ -1165,4 +1141,16 @@ textarea {
 .login-switch .link {
   min-height: 32px;
   font-weight: 600;
+}
+
+/* ---------- просмотр дня на главном ---------- */
+.start-btn {
+  margin: 4px 0 12px;
+}
+.day-sub {
+  margin: 0 0 12px;
+  font-size: 13.5px;
+}
+.day-full + .btn.big {
+  margin-top: 18px;
 }

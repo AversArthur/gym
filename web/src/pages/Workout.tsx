@@ -8,27 +8,8 @@ import { restTimer } from '../lib/timer';
 import { useWakeLock } from '../lib/wakeLock';
 import { draftKey, useWorkoutSession } from '../lib/workoutSession';
 import { useDayColor } from '../lib/useDayColor';
+import { blocksOf, restText } from '../lib/blocks';
 import { SyncBadge } from '../components/SyncBadge';
-
-/** Подряд идущие упражнения с одним superset_group — один блок. */
-function blocksOf(items: ProgramItem[]): ProgramItem[][] {
-  const out: ProgramItem[][] = [];
-  for (const it of items) {
-    const prev = out[out.length - 1];
-    if (prev && it.supersetGroup != null && prev[0]!.supersetGroup === it.supersetGroup)
-      prev.push(it);
-    else out.push([it]);
-  }
-  return out;
-}
-
-function restText(block: ProgramItem[]): string {
-  const sec = block[block.length - 1]!.restSec;
-  if (!sec) return '';
-  const t =
-    sec >= 120 && sec % 60 === 0 ? `${sec / 60} мин` : sec > 90 ? formatClock(sec) : `${sec} с`;
-  return block.length > 1 ? `Отдых ${t} после пары` : `Отдых ${t}`;
-}
 
 export function WorkoutPage() {
   const { id: clientId } = useParams<{ id: string }>();

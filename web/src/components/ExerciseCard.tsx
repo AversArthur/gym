@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import {
-  describeSets,
   formatKg,
   isLoadMode,
   parseKg,
@@ -11,8 +10,7 @@ import {
   type WeightMode,
   type WorkoutSet,
 } from '@gym/shared';
-import { ExerciseAnim } from '../anim/ExerciseAnim';
-import { formatRange } from '../lib/format';
+import { ExerciseHead } from './ExerciseHead';
 import { draftKey, type Draft, type SetStatus } from '../lib/workoutSession';
 import { SetRow, type RowStatus } from './SetRow';
 
@@ -43,7 +41,6 @@ interface Props {
 
 export function ExerciseCard(p: Props) {
   const { item, exercise: ex } = p;
-  const [cuesOpen, setCuesOpen] = useState(false);
   const [invalid, setInvalid] = useState<Record<number, 'weight' | 'amount'>>({});
 
   const isSec = item.unit === 'sec';
@@ -127,56 +124,20 @@ export function ExerciseCard(p: Props) {
 
   return (
     <article className="ex">
-      <div className="ex-head">
-        <ExerciseAnim id={ex.animKey} label={ex.nameRu} />
-        <div className="ex-info">
-          <h3>{ex.nameRu}</h3>
-          <p className="dose">
-            {item.sets} × {formatRange(item.repMin, item.repMax, item.unit)}
-            {doneCount > 0 && (
-              <span className="done-count">
-                {' '}
-                · {doneCount}/{rows}
-              </span>
-            )}
-          </p>
-          {lastSets.length > 0 && (
-            <p className="last">
-              <span className="muted">Прошлый раз:</span>{' '}
-              <span className="mono">
-                {describeSets(lastSets, item.unit, ex.weightMode !== 'bodyweight')}
-              </span>
-            </p>
-          )}
-          {progression && (
-            <p className="progress-hint">
-              Пора {progression.delta > 0 ? 'прибавить' : 'убавить помощь'}:{' '}
-              <b>
-                {progression.delta > 0 ? '+' : '−'}
-                {formatKg(Math.abs(progression.delta))} кг
-              </b>{' '}
-              → {formatKg(progression.weight)}
-            </p>
-          )}
-          {ex.cues.length > 0 && (
-            <button
-              type="button"
-              className="link cues-toggle"
-              aria-expanded={cuesOpen}
-              onClick={() => setCuesOpen(!cuesOpen)}
-            >
-              {cuesOpen ? 'Скрыть технику' : 'Техника'}
-            </button>
-          )}
-        </div>
-      </div>
-      {cuesOpen && (
-        <ul className="cues">
-          {ex.cues.map((c) => (
-            <li key={c}>{c}</li>
-          ))}
-        </ul>
-      )}
+      <ExerciseHead
+        item={item}
+        exercise={ex}
+        lastSets={lastSets}
+        progression={progression}
+        doseExtra={
+          doneCount > 0 && (
+            <span className="done-count">
+              {' '}
+              · {doneCount}/{rows}
+            </span>
+          )
+        }
+      />
 
       <div className={`setrows${showWeight ? '' : ' no-weight'}`}>
         <div className="setrows-head" aria-hidden>

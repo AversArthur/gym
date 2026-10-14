@@ -8,7 +8,8 @@ import {
   type WorkoutListItem,
 } from '@gym/shared';
 import { api, get } from '../lib/api';
-import { formatDate, formatRange, localDate } from '../lib/format';
+import { formatDate, localDate } from '../lib/format';
+import { DayPreview } from '../components/DayPreview';
 import { loadLastAll, loadProgram } from '../lib/program';
 import { cachedGet } from '../lib/offline/cachedGet';
 import { localWorkouts } from '../lib/offline/idb';
@@ -69,8 +70,9 @@ export function TodayPage() {
         .filter((w) => w.finishedAt != null)
         .map((w) => ({ startedAt: w.startedAt, dayCode: w.dayCode })),
     ].sort((a, b) => b.startedAt - a.startedAt);
-    void loadLastAll(program); // прогрев «прошлого раза» для офлайн-старта
-    return { program, active, lastDone: done[0] ?? null };
+    // «Прошлый раз» для просмотра дня; заодно прогревает кэш для офлайн-старта
+    const last = await loadLastAll(program);
+    return { program, active, lastDone: done[0] ?? null, last };
   }, []);
   const [picked, setPicked] = useState<DayCode>();
   const [starting, setStarting] = useState(false);
@@ -139,35 +141,41 @@ export function TodayPage() {
         ))}
       </nav>
 
-      {day && (
-        <div className="card day-preview">
-          <p className="muted">{day.subtitle}</p>
-          <ol>
-            {day.items.map((it) => (
-              <li key={it.id} className={it.supersetGroup ? 'ss' : undefined}>
-                <span>{program.exercises[it.exerciseId]?.nameRu}</span>
-                <span className="mono muted">
-                  {it.sets}×{formatRange(it.repMin, it.repMax, it.unit)}
-                </span>
-              </li>
-            ))}
-          </ol>
-          {lastDone && (
-            <p className="muted small">
-              Последняя: {formatDate(lastDone.startedAt)}, день {lastDone.dayCode}
-            </p>
-          )}
-        </div>
-      )}
-
       <button
         type="button"
-        className="btn primary wide big"
+        className="btn primary wide big start-btn"
         onClick={start}
         disabled={starting || !!active}
       >
         {active ? 'Сначала заверши текущую' : `Начать тренировку ${code ?? ''}`}
       </button>
+
+      {day && (
+        <>
+          <p className="muted day-sub">
+            {day.subtitle}
+            {lastDone && (
+              <>
+                <br />
+                <span className="small">
+                  Последняя: {formatDate(lastDone.startedAt)}, день {lastDone.dayCode}
+                </span>
+              </>
+            )}
+          </p>
+          <DayPreview day={day} program={program} last={data?.last ?? {}} />
+          {!active && (
+            <button
+              type="button"
+              className="btn primary wide big"
+              onClick={start}
+              disabled={starting}
+            >
+              Начать тренировку {code}
+            </button>
+          )}
+        </>
+      )}
 
       <BodyweightCard />
     </section>
